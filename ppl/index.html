@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0907">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>PPL Verano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0907; --s1:#141210; --s2:#1e1b17; --line:#2e2924;
+  --foam:#f0ece4; --muted:#7a7060;
+  --push:#f5a623; --pull:#3dd68c; --legs:#7b8ff5;
+  --heavy:#ff5c5c; --acc:#f5a623; --green:#3dd68c;
+  --tab-h:66px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{font-size:15px;}
+body{
+  background:var(--bg);color:var(--foam);font-family:'DM Sans',sans-serif;
+  min-height:100dvh;padding-bottom:calc(var(--tab-h) + 14px);overflow-x:hidden;
+}
+
+/* HEADER + MODE SWITCH */
+.site-head{
+  padding:16px 14px 12px;border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:30;background:rgba(10,9,7,.95);backdrop-filter:blur(10px);
+}
+.head-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.head-title{font-family:'Bebas Neue';font-size:26px;letter-spacing:.04em;line-height:1;}
+.head-title small{display:block;font-family:'DM Sans';font-size:9.5px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+.mode-switch{
+  display:flex;background:var(--s2);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px;
+}
+.mode-switch button{
+  border:none;background:transparent;color:var(--muted);cursor:pointer;
+  font-family:'Bebas Neue';font-size:14px;letter-spacing:.08em;
+  padding:8px 14px;border-radius:8px;transition:.15s;line-height:1;
+}
+.mode-switch button.on{background:var(--acc);color:var(--bg);}
+
+/* DAY TABS (bottom) */
+.tab-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  background:rgba(10,9,7,.93);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);height:var(--tab-h);
+  display:flex;padding:0 2px env(safe-area-inset-bottom,0px);
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  cursor:pointer;border:none;background:transparent;color:var(--muted);
+  font-size:8.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  position:relative;transition:.15s;font-family:'DM Sans';
+}
+.tab::before{content:"";position:absolute;top:0;left:12%;right:12%;height:2px;background:transparent;transition:.2s;border-radius:0 0 2px 2px;}
+.tab.on{color:var(--foam);}
+.tab.push.on::before{background:var(--push);}
+.tab.pull.on::before{background:var(--pull);}
+.tab.legs.on::before{background:var(--legs);}
+.tab .ti{font-size:17px;line-height:1;}
+
+/* PAGES */
+main{padding:0 13px;}
+.hidden{display:none!important;}
+
+/* SESSION INTRO */
+.sess-intro{margin:13px 0 12px;padding:11px 13px;border-radius:13px;border:1px solid;}
+.sess-intro.push{background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.2);}
+.sess-intro.pull{background:rgba(61,214,140,.08);border-color:rgba(61,214,140,.2);}
+.sess-intro.legs{background:rgba(123,143,245,.08);border-color:rgba(123,143,245,.2);}
+.si-top{display:flex;align-items:center;gap:9px;}
+.si-emoji{font-size:24px;}
+.si-title{font-family:'Bebas Neue';font-size:21px;letter-spacing:.03em;line-height:1;}
+.si-sub{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.si-warn{margin-top:9px;padding:8px 10px;background:rgba(255,92,92,.1);
+  border:1px solid rgba(255,92,92,.2);border-radius:8px;font-size:10.5px;color:#ff8f8f;line-height:1.4;}
+
+/* ══ GUÍA CARDS ══ */
+.ex-card{background:var(--s2);border:1px solid var(--line);border-radius:15px;margin-bottom:12px;overflow:hidden;animation:up .3s ease both;}
+@keyframes up{from{opacity:0;transform:translateY(8px);}to{opacity:1;}}
+.ex-img-wrap{width:100%;height:170px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:var(--s1);}
+.ex-img-wrap img{width:100%;height:100%;object-fit:contain;}
+.ex-fb{display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;gap:7px;}
+.ex-fb .fe{font-size:48px;}
+.ex-fb .fl{font-family:'Bebas Neue';letter-spacing:.1em;font-size:12px;color:var(--muted);}
+.ex-strip{height:3px;}
+.push-strip{background:var(--push);} .pull-strip{background:var(--pull);} .legs-strip{background:var(--legs);}
+.ex-body{padding:12px 13px 13px;}
+.ex-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.ex-name{font-family:'Bebas Neue';font-size:22px;letter-spacing:.02em;line-height:1;flex:1;}
+.scheme-pill{font-family:'Bebas Neue';font-size:14px;letter-spacing:.04em;background:var(--s1);
+  border:1px solid var(--line);padding:5px 9px;border-radius:7px;white-space:nowrap;}
+.pct-chip{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  padding:4px 9px;border-radius:6px;margin-top:8px;}
+.pc-heavy{background:rgba(255,92,92,.15);color:#ff8f8f;}
+.pc-mod{background:rgba(245,166,35,.15);color:var(--acc);}
+.pc-lite{background:rgba(61,214,140,.15);color:var(--green);}
+.info-grid{display:flex;flex-direction:column;gap:7px;margin-top:10px;}
+.ib{background:var(--s1);border-radius:9px;padding:9px 10px;border-left:2px solid var(--line);}
+.ib.zone{border-left-color:#a78bfa;} .ib.tech{border-left-color:var(--muted);}
+.ib.rests{border-left-color:#38bdf8;} .ib.vars{border-left-color:#fb923c;}
+.il{font-size:9px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:var(--muted);margin-bottom:3px;}
+.it{font-size:12px;line-height:1.5;}
+.it em{color:#c4b5fd;font-style:normal;font-weight:600;}
+.rest-row{display:flex;gap:6px;flex-wrap:wrap;}
+.rc{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:5px;background:rgba(56,189,248,.1);color:#7dd3fc;}
+.vi{font-size:11px;color:var(--muted);padding:2px 0;display:flex;gap:6px;}
+.vi::before{content:"→";color:#fb923c;flex:0 0 auto;}
+
+/* ══ REGISTRO ══ */
+.rm-banner{background:var(--s2);border:1px solid var(--line);border-radius:13px;padding:12px;margin:13px 0 0;}
+.rm-banner h2{font-family:'Bebas Neue';font-size:16px;letter-spacing:.06em;margin-bottom:2px;}
+.rm-banner p{font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.4;}
+.rm-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.rm-item label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;}
+.rm-row{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.rm-row input{flex:1;width:100%;background:transparent;border:none;color:var(--foam);
+  font-family:'Bebas Neue';font-size:20px;padding:6px 7px;outline:none;}
+.rm-row .u{font-size:10px;color:var(--muted);padding:0 8px 0 2px;font-weight:700;}
+.weekbar{display:flex;align-items:center;gap:10px;margin:11px 0 0;background:var(--s2);
+  border:1px solid var(--line);border-radius:12px;padding:7px 11px;}
+.weekbar .lbl{font-family:'Bebas Neue';letter-spacing:.1em;font-size:13px;color:var(--muted);}
+.stepper{display:flex;align-items:center;gap:8px;margin-left:auto;}
+.stepper button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);
+  background:var(--s1);color:var(--foam);font-size:19px;font-weight:700;cursor:pointer;}
+.stepper button:active{background:var(--acc);color:var(--bg);}
+.wknum{font-family:'Bebas Neue';font-size:28px;min-width:50px;text-align:center;color:var(--acc);}
+.reg-card{background:var(--s2);border:1px solid var(--line);border-radius:13px;padding:12px 13px;margin-bottom:9px;position:relative;overflow:hidden;animation:up .3s ease both;}
+.reg-accent{position:absolute;left:0;top:0;bottom:0;width:3px;}
+.reg-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.reg-name{font-family:'Bebas Neue';font-size:19px;line-height:1;flex:1;}
+.reg-scheme{font-family:'Bebas Neue';font-size:13px;background:var(--s1);border:1px solid var(--line);padding:4px 8px;border-radius:6px;white-space:nowrap;}
+.target-line{display:flex;align-items:center;justify-content:space-between;margin-top:8px;
+  background:var(--s1);border-radius:8px;padding:7px 10px;}
+.target-line .tl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;}
+.target-line .tv{font-family:'Bebas Neue';font-size:16px;color:var(--acc);letter-spacing:.03em;}
+.input-row{display:flex;align-items:center;gap:9px;margin-top:9px;}
+.input-row label{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;}
+.wt-wrap{margin-left:auto;display:flex;align-items:center;background:var(--bg);
+  border:1px solid var(--line);border-radius:9px;overflow:hidden;transition:.2s;}
+.wt-wrap input{width:82px;background:transparent;border:none;color:var(--foam);
+  font-family:'Bebas Neue';font-size:25px;text-align:right;padding:7px 5px 7px 11px;outline:none;}
+.wt-wrap.filled{border-color:#a06d10;}
+.wt-wrap.filled input{color:var(--acc);}
+.wt-wrap .unit{font-size:11px;color:var(--muted);padding:0 10px 0 4px;font-weight:700;}
+.last-entry{font-size:10px;color:var(--muted);margin-top:5px;text-align:right;min-height:12px;}
+.last-entry b{color:var(--green);}
+
+/* TOAST + RESET */
+.toast{position:fixed;bottom:calc(var(--tab-h) + 14px);left:50%;transform:translateX(-50%) translateY(100px);
+  font-family:'Bebas Neue';letter-spacing:.1em;font-size:13px;padding:10px 20px;border-radius:30px;
+  transition:.3s;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.toast.ok{background:var(--acc);color:var(--bg);}
+.toast.err{background:var(--heavy);color:#fff;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.reset{width:100%;margin:18px 0 8px;background:transparent;border:1px solid var(--line);
+  color:var(--muted);font-size:11.5px;font-weight:600;padding:12px;border-radius:10px;cursor:pointer;}
+.reset:active{border-color:var(--heavy);color:var(--heavy);}
+.notes-block{background:var(--s2);border:1px solid var(--line);border-radius:13px;padding:13px;margin:14px 0 8px;}
+.notes-block h3{font-family:'Bebas Neue';font-size:15px;letter-spacing:.06em;color:var(--acc);margin-bottom:7px;}
+.notes-block p{font-size:11px;color:var(--muted);line-height:1.5;}
+.notes-block p+p{margin-top:5px;}
+.notes-block b{color:var(--foam);}
+</style>
+</head>
+<body>
+
+<div class="site-head">
+  <div class="head-row">
+    <div class="head-title"><small>Energy Fit · Verano</small><span id="headDay">PUSH A</span></div>
+    <div class="mode-switch">
+      <button id="modeGuia" class="on">Guía</button>
+      <button id="modeReg">Registro</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div id="guiaView"></div>
+  <div id="regView" class="hidden"></div>
+</main>
+
+<nav class="tab-bar" id="tabBar"></nav>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════ DATA ═══════ */
+const IMG = {
+  bench:'https://muscles.wiki/wp-content/uploads/2021/05/Barbell-Bench-Press.gif',
+  inclineDB:'https://muscles.wiki/wp-content/uploads/2021/05/Incline-Dumbbell-Press.gif',
+  cableFly:'https://muscles.wiki/wp-content/uploads/2021/05/Cable-Fly.gif',
+  latRaise:'https://muscles.wiki/wp-content/uploads/2021/05/Lateral-Raise.gif',
+  tricepPD:'https://muscles.wiki/wp-content/uploads/2021/05/Triceps-Rope-Pushdown.gif',
+  pullUp:'https://muscles.wiki/wp-content/uploads/2021/05/Pull-Up.gif',
+  cableRow:'https://muscles.wiki/wp-content/uploads/2021/05/Seated-Cable-Row.gif',
+  pullover:'https://muscles.wiki/wp-content/uploads/2021/05/Dumbbell-Pullover.gif',
+  curl:'https://muscles.wiki/wp-content/uploads/2021/05/Barbell-Curl.gif',
+  facePull:'https://muscles.wiki/wp-content/uploads/2021/05/Cable-Face-Pull.gif',
+  squat:'https://muscles.wiki/wp-content/uploads/2021/05/Barbell-Back-Squat.gif',
+  legPress:'https://muscles.wiki/wp-content/uploads/2021/05/Leg-Press.gif',
+  legExt:'https://muscles.wiki/wp-content/uploads/2021/05/Leg-Extension.gif',
+  lyingCurl:'https://muscles.wiki/wp-content/uploads/2021/05/Lying-Leg-Curl.gif',
+  calfStand:'https://muscles.wiki/wp-content/uploads/2021/05/Standing-Calf-Raise.gif',
+  ohp:'https://muscles.wiki/wp-content/uploads/2021/05/Overhead-Press.gif',
+  cgBench:'https://muscles.wiki/wp-content/uploads/2021/05/Close-Grip-Bench-Press.gif',
+  pecDeck:'https://muscles.wiki/wp-content/uploads/2021/05/Pec-Deck.gif',
+  triOH:'https://muscles.wiki/wp-content/uploads/2021/05/Overhead-Tricep-Extension.gif',
+  bbRow:'https://muscles.wiki/wp-content/uploads/2021/05/Barbell-Row.gif',
+  latPD:'https://muscles.wiki/wp-content/uploads/2021/05/Lat-Pulldown.gif',
+  hammer:'https://muscles.wiki/wp-content/uploads/2021/05/Hammer-Curl.gif',
+  deadlift:'https://muscles.wiki/wp-content/uploads/2021/05/Barbell-Deadlift.gif',
+  hipThrust:'https://muscles.wiki/wp-content/uploads/2021/05/Hip-Thrust.gif',
+  lunges:'https://muscles.wiki/wp-content/uploads/2021/05/Dumbbell-Lunge.gif',
+  seatedCurl:'https://muscles.wiki/wp-content/uploads/2021/05/Seated-Leg-Curl.gif',
+  calfSeat:'https://muscles.wiki/wp-content/uploads/2021/05/Seated-Calf-Raise.gif',
+  cabledRow:'https://muscles.wiki/wp-content/uploads/2021/05/Low-Cable-Row.gif',
+};
+const RM_KEYS = [
+  {k:'bench',label:'Press banca'},{k:'ohp',label:'Press militar'},
+  {k:'squat',label:'Sentadilla'},{k:'dead',label:'Peso muerto'},
+  {k:'pull',label:'Dominadas/Jalón'},{k:'row',label:'Remo'},
+];
+const DAYS = [
+ {id:'pa',type:'push',icon:'🔴',label:'Push A',sub:'Pecho dom. · Lunes',warn:null,
+  focus:'Compuesto pesado en banca. Descanso largo en el 1º, corto en accesorios.',
+  ex:[
+   {name:'Press Banca con Barra',scheme:'4×5-6',img:IMG.bench,emoji:'🏋️',pctTxt:'80-87%',pctType:'heavy',pct:[80,87],rm:'bench',
+    zone:'<em>Pecho central y exterior + tríceps al final.</em> Si solo notas el hombro anterior, los codos están muy abiertos. Deben ir a 45-60° del tronco.',
+    tech:'Escápulas juntas y hacia abajo. Arco lumbar natural. Barra al esternón medio, pausa de 1s en pecho las primeras semanas.',
+    rests:['Series: 3 min','Siguiente ej.: 2 min'],
+    vars:['Máquina de press guiada (eje al nivel del esternón)','Press con mancuernas plano']},
+   {name:'Press Inclinado Mancuernas',scheme:'3×10',img:IMG.inclineDB,emoji:'📐',pctTxt:'67-75%',pctType:'mod',pct:[67,75],rm:'bench',
+    zone:'<em>Porción clavicular del pecho (arriba).</em> Si solo notas el hombro, baja el ángulo del banco.',
+    tech:'Banco a 30-35°. Mancuernas bajan hasta que el codo quede bajo el hombro. Bajada en 2-3s.',
+    rests:['Series: 90 s','Siguiente: 60 s'],
+    vars:['Press inclinado en máquina','Press inclinado con barra']},
+   {name:'Aperturas en Polea',scheme:'3×12',img:IMG.cableFly,emoji:'🦅',pctTxt:'2-3 en recámara',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Pecho en el estiramiento.</em> Si notas el deltoides, los codos están demasiado rectos.',
+    tech:'Codos semiflexionados y fijos. El movimiento es un abrazo, no un tirón. Pausa 1s en contracción.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Pec-deck (mariposa)','Aperturas con mancuernas plano']},
+   {name:'Elevaciones Laterales',scheme:'3×15',img:IMG.latRaise,emoji:'🦾',pctTxt:'RPE 7 · ligero',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Cabeza lateral del deltoides.</em> Si el trapecio sube, el peso es excesivo.',
+    tech:'Leve inclinación adelante. Sube hasta paralelo, ni más. Pausa 1s arriba. Sin impulso.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Máquina de laterales','Cable lateral raise unilateral']},
+   {name:'Extensión Tríceps Polea',scheme:'3×12',img:IMG.tricepPD,emoji:'💪',pctTxt:'2 en recámara',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Tríceps, especialmente cabeza larga.</em> Si el codo duele, calienta más y baja el peso.',
+    tech:'Codos pegados y fijos. Solo se mueve el antebrazo. Barra recta o cuerda.',
+    rests:['Series: 60 s'],
+    vars:['Fondos en paralelas','Press banca agarre cerrado']},
+  ]},
+ {id:'pla',type:'pull',icon:'🟢',label:'Pull A',sub:'Ancho · Martes',warn:null,
+  focus:'Dominadas con mancuerna entre rodillas (10-12 kg de inicio). Jalón si no están libres.',
+  ex:[
+   {name:'Dominadas con Mancuerna',scheme:'4×6-8',img:IMG.pullUp,emoji:'🔝',pctTxt:'Difícil en rep 7-8',pctType:'heavy',pct:[80,87],rm:'pull',
+    zone:'<em>Dorsal ancho en la contracción</em> — mete los codos "en los bolsillos". Si solo notas bíceps, no inicias con la espalda.',
+    tech:'Con 24 máx en BW, empieza con 10-12 kg entre rodillas. Pecho a la barra. Bajada 2-3s.',
+    rests:['Series: 3 min','Siguiente: 2 min'],
+    vars:['Jalón al pecho agarre ancho','Jalón en máquina guiada']},
+   {name:'Remo Máquina / Barra',scheme:'3×8',img:IMG.cableRow,emoji:'⛵',pctTxt:'70-78%',pctType:'mod',pct:[70,78],rm:'row',
+    zone:'<em>Dorsal medio, romboides, trapecio inferior.</em> Debes "apretar" algo entre las escápulas al final.',
+    tech:'Pecho en el pad si es máquina. Codos hacia atrás, no arriba. Pausa 1s al final.',
+    rests:['Series: 2 min','Siguiente: 90 s'],
+    vars:['Remo con barra T','Remo mancuerna 1 mano en banco']},
+   {name:'Pullover en Polea Alta',scheme:'3×12',img:IMG.pullover,emoji:'🏊',pctTxt:'Mod-ligero',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Dorsal en estiramiento + serrato.</em> Movimiento de hombro, no de codo. Clásico del nadador.',
+    tech:'Brazos casi extendidos. De arriba a los muslos con el dorsal como motor.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Pullover mancuerna en banco','Straight-arm pulldown']},
+   {name:'Curl Bíceps Máquina/Barra',scheme:'3×10',img:IMG.curl,emoji:'💪',pctTxt:'60-68%',pctType:'lite',pct:[60,68],rm:null,
+    zone:'<em>Bíceps en el pico de contracción.</em> Si notas más antebrazo, agarra más ancho en supino.',
+    tech:'Sin balanceo. Pausa 1s arriba, bajada 2s.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Curl mancuernas alterno','Curl predicador (Scott)']},
+   {name:'Face Pull',scheme:'3×15',img:IMG.facePull,emoji:'🎯',pctTxt:'Ligero · perfecto',pctType:'lite',pct:[50,60],rm:null,
+    zone:'<em>Deltoides posterior + manguito rotador.</em> El ejercicio de salud de hombro más importante de la semana.',
+    tech:'Polea a altura de cara. Tira a la frente separando manos. Codos arriba y atrás. No lo saltes.',
+    rests:['Series: 60 s'],
+    vars:['Pájaro con mancuernas','Face pull con banda']},
+  ]},
+ {id:'la',type:'legs',icon:'🔵',label:'Legs A',sub:'Cuádriceps · Miércoles',warn:null,
+  focus:'Sentadilla pesada como eje. Calienta rodilla y cadera antes del peso de trabajo.',
+  ex:[
+   {name:'Sentadilla con Barra',scheme:'4×5-6',img:IMG.squat,emoji:'🦵',pctTxt:'80-87%',pctType:'heavy',pct:[80,87],rm:'squat',
+    zone:'<em>Cuádriceps en la subida, glúteo abajo.</em> Si solo notas lumbar, el torso se inclina demasiado.',
+    tech:'Barra sobre trapecios. Paralela o más. Rodillas siguen a los pies. Core como para recibir un golpe. Valsalva en cada rep.',
+    rests:['Series: 3 min','Siguiente: 2 min'],
+    vars:['Hack squat','Goblet squat con disco si hay cola']},
+   {name:'Prensa de Piernas',scheme:'3×10',img:IMG.legPress,emoji:'🔩',pctTxt:'67-75%',pctType:'mod',pct:[67,75],rm:null,
+    zone:'<em>Cuádriceps, glúteo secundario.</em> Si la lumbar se despega del respaldo, bajas demasiado.',
+    tech:'Pies anchura cadera, zona media. Baja a ~90°. No bloquees rodillas arriba.',
+    rests:['Series: 90 s','Siguiente: 60 s'],
+    vars:['Sentadilla en Smith','Prensa unilateral']},
+   {name:'Extensión de Cuádriceps',scheme:'3×12',img:IMG.legExt,emoji:'⚡',pctTxt:'Pausa 1s arriba',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Cuádriceps, especialmente recto anterior.</em> Si pinza la rodilla, reduce rango al inicio.',
+    tech:'Pausa 1s en extensión. Bajada 2-3s. Eje de la máquina alineado con la rodilla.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Búlgara con mancuernas','Step-up al banco']},
+   {name:'Curl Femoral Tumbado',scheme:'3×12',img:IMG.lyingCurl,emoji:'🎣',pctTxt:'2 en recámara',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Isquiotibiales.</em> Si el glúteo se levanta, el peso es excesivo.',
+    tech:'Caderas pegadas al pad. Pausa 1s arriba. Bajada lenta.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Curl femoral sentado','Rumano con mancuernas']},
+   {name:'Gemelo de Pie',scheme:'4×15',img:IMG.calfStand,emoji:'🦶',pctTxt:'Rango completo',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Gastrocnemio.</em> Pausa 1-2s arriba para maximizar contracción.',
+    tech:'Rodilla casi extendida. Talón abajo completo, arriba completo. Sin rebote.',
+    rests:['Series: 60 s'],
+    vars:['Unilateral con mancuerna','Gemelo en prensa']},
+  ]},
+ {id:'pb',type:'push',icon:'🔴',label:'Push B',sub:'Hombro dom. · Jueves',
+  warn:'⚠ Calienta el manguito rotador (10 face pulls o rotación externa con banda) antes del militar.',
+  focus:'Hombro como eje. Militar pesado, banca cerrada como accesorio. 4 series de laterales.',
+  ex:[
+   {name:'Press Militar',scheme:'4×6-8',img:IMG.ohp,emoji:'🏹',pctTxt:'75-83%',pctType:'heavy',pct:[75,83],rm:'ohp',
+    zone:'<em>Deltoides anterior y medio, tríceps al final.</em> Si notas el cuello, estás encogiendo hombros.',
+    tech:'Sin arquear lumbar: glúteo y core activos antes de empujar. Barra hasta barbilla o algo más.',
+    rests:['Series: 3 min','Siguiente: 2 min'],
+    vars:['Press Arnold','Press hombro en máquina']},
+   {name:'Banca Agarre Cerrado',scheme:'3×10',img:IMG.cgBench,emoji:'🤜',pctTxt:'67-75%',pctType:'mod',pct:[67,75],rm:'bench',
+    zone:'<em>Tríceps como motor, pecho esternal secundario.</em> Si los codos se abren, el agarre es muy estrecho.',
+    tech:'Agarre a anchura de hombros. Codos a ~30°. Controla la bajada.',
+    rests:['Series: 90 s','Siguiente: 60 s'],
+    vars:['Fondos en paralelas','Press mancuernas neutro']},
+   {name:'Elevaciones Laterales ×4',scheme:'4×15',img:IMG.latRaise,emoji:'🦾',pctTxt:'RPE 7',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Deltoides lateral.</em> Hoy 4 series (vs 3 el lunes) para sumar volumen semanal.',
+    tech:'Mismo protocolo que Push A. Sube 1-2 kg si se hace fácil en semana 3-4.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Cable lateral unilateral','Máquina de laterales']},
+   {name:'Cruce Poleas / Pec-Deck',scheme:'3×12',img:IMG.pecDeck,emoji:'🦅',pctTxt:'Siente el estiramiento',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Pecho en el estiramiento.</em> Aislamiento puro — la conexión importa más que el peso.',
+    tech:'Cruce: polea alta, junta abajo. Pec-deck: pausa 1s en contracción.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Aperturas mancuernas','Pullover mancuerna']},
+   {name:'Tríceps sobre Cabeza',scheme:'3×12',img:IMG.triOH,emoji:'🔝',pctTxt:'Mod-ligero',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Cabeza larga del tríceps</em> — solo se activa del todo con el brazo elevado. Distinto al press-down del lunes.',
+    tech:'Codos cerca de la cabeza, que no se abran. Rango completo.',
+    rests:['Series: 60 s'],
+    vars:['French press con barra EZ','Fondos en banco']},
+  ]},
+ {id:'plb',type:'pull',icon:'🟢',label:'Pull B',sub:'Grosor · Viernes',warn:null,
+  focus:'Remo pesado (ángulo distinto al martes). Dorsal medio, romboides y trapecio.',
+  ex:[
+   {name:'Remo Barra / Máquina',scheme:'4×6-8',img:IMG.bbRow,emoji:'⚓',pctTxt:'78-85%',pctType:'heavy',pct:[78,85],rm:'row',
+    zone:'<em>Dorsal medio, romboides.</em> Si el martes usaste máquina, hoy barra (y viceversa).',
+    tech:'Torso a 45°, codos al costado, barra al ombligo. Pausa 1s. Sin balanceo.',
+    rests:['Series: 3 min','Siguiente: 2 min'],
+    vars:['Remo mancuerna 1 mano','Remo polea sentado ancho']},
+   {name:'Jalón Cerrado / Neutro',scheme:'3×10',img:IMG.latPD,emoji:'🎿',pctTxt:'67-75%',pctType:'mod',pct:[67,75],rm:'pull',
+    zone:'<em>Dorsal en la parte baja de la contracción.</em> Supino activa más bíceps; neutro más dorsal.',
+    tech:'Pecho arriba, leve inclinación atrás. Barra al esternón, no al cuello.',
+    rests:['Series: 90 s','Siguiente: 60 s'],
+    vars:['Chin-ups (supino)','Jalón con triángulo']},
+   {name:'Remo en Polea Baja',scheme:'3×12',img:IMG.cabledRow,emoji:'🚣',pctTxt:'Moderado',pctType:'lite',pct:[60,68],rm:null,
+    zone:'<em>Trapecio medio y romboides.</em> Si solo notas bíceps, no completas la retracción escapular.',
+    tech:'Pecho fuera. Pausa 1s con codos atrás. Torso fijo.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Remo mancuernas en banco inclinado','Face pull en polea baja']},
+   {name:'Curl Martillo',scheme:'3×12',img:IMG.hammer,emoji:'🔨',pctTxt:'Moderado',pctType:'lite',pct:[60,68],rm:null,
+    zone:'<em>Braquial y braquiorradial.</em> Construye el grosor del brazo más que el curl supino.',
+    tech:'Palmas enfrentadas. Sin balanceo. Alterno o simultáneo.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Martillo en polea con cuerda','Curl inverso con barra']},
+   {name:'Face Pull',scheme:'3×15',img:IMG.facePull,emoji:'🎯',pctTxt:'Ligero',pctType:'lite',pct:[50,60],rm:null,
+    zone:'<em>Deltoides posterior + manguito.</em> Dos veces por semana. Mantenimiento del hombro.',
+    tech:'Tira a la frente separando las manos. Codos arriba y atrás.',
+    rests:['Series: 60 s'],
+    vars:['Pájaro con mancuernas','Rotación externa con banda']},
+  ]},
+ {id:'lb',type:'legs',icon:'🔵',label:'Legs B',sub:'Posterior · Sábado',
+  warn:'⚠ Calienta la lumbar antes del peso muerto: 2 series de rumano ligero. Si viene cargada de la semana, baja una serie.',
+  focus:'Peso muerto como eje. Cadena posterior, glúteo e isquios. Complementa a Legs A.',
+  ex:[
+   {name:'Peso Muerto',scheme:'4×5',img:IMG.deadlift,emoji:'⚡',pctTxt:'80-87%',pctType:'heavy',pct:[80,87],rm:'dead',
+    zone:'<em>Isquios y glúteo en la subida, erectores estabilizando.</em> Si solo notas lumbar, la cadera sube antes que los hombros — empuja el suelo.',
+    tech:'Barra pegada a las espinillas. Valsalva en cada rep. Puedes resetear el agarre entre reps.',
+    rests:['Series: 3 min','Siguiente: 2 min'],
+    vars:['Barra hexagonal (menos lumbar)','Rumano si la lumbar viene cargada']},
+   {name:'Hip Thrust',scheme:'3×10',img:IMG.hipThrust,emoji:'🍑',pctTxt:'67-75%',pctType:'mod',pct:[67,75],rm:null,
+    zone:'<em>Glúteo máximo arriba.</em> Si notas más isquios, aleja un poco los pies.',
+    tech:'Pausa 1-2s en extensión. Barbilla al pecho. Banco a la altura de omóplatos.',
+    rests:['Series: 90 s','Siguiente: 90 s'],
+    vars:['Puente de glúteo con disco','Máquina de glúteo']},
+   {name:'Zancadas con Mancuernas',scheme:'3×10/p',img:IMG.lunges,emoji:'🚶',pctTxt:'Técnica primero',pctType:'lite',pct:[60,68],rm:null,
+    zone:'<em>Cuádriceps delantero, glúteo trasero.</em> Si notas la rodilla trasera, el paso es muy corto.',
+    tech:'Zancada larga, rodilla no sobrepasa el pie. Torso erguido.',
+    rests:['Series: 90 s','Siguiente: 60 s'],
+    vars:['Búlgara en banco','Step-up con mancuernas']},
+   {name:'Curl Femoral',scheme:'3×12',img:IMG.seatedCurl,emoji:'🎣',pctTxt:'2 en recámara',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Isquiotibiales.</em> Sentado trabaja más la cabeza superior; tumbado la inferior. Alterna por semanas.',
+    tech:'Pausa 1s arriba. Bajada lenta 2-3s. Sin impulso.',
+    rests:['Series: 60 s','Siguiente: 60 s'],
+    vars:['Curl nórdico si hay banco','Rumano con mancuernas']},
+   {name:'Gemelo Sentado',scheme:'4×15',img:IMG.calfSeat,emoji:'🦶',pctTxt:'Rango completo',pctType:'lite',pct:[55,65],rm:null,
+    zone:'<em>Sóleo</em> — con rodilla flexionada el gastrocnemio se desactiva. Complementa al de pie del miércoles.',
+    tech:'Rodillas a 90°. Rango completo con pausa. El sóleo responde muy bien al volumen.',
+    rests:['Series: 60 s'],
+    vars:['Con mancuerna en el muslo','Con disco si la máquina está ocupada']},
+  ]},
+];
+
+/* ═══════ STATE & STORAGE ═══════ */
+const STORE='ppl-verano-pwa-v1';
+const COLORS={push:'#f5a623',pull:'#3dd68c',legs:'#7b8ff5'};
+const PC={heavy:'pc-heavy',mod:'pc-mod',lite:'pc-lite'};
+let state={mode:'guia',day:'pa',week:1};
+let weights={},rms={},saveTimer=null;
+let storageOK=false;
+try{localStorage.setItem('__t','1');localStorage.removeItem('__t');storageOK=true;}catch(e){}
+
+function load(){
+  try{const raw=localStorage.getItem(STORE);
+    if(raw){const p=JSON.parse(raw);weights=p.weights||{};rms=p.rms||{};if(p.state)state={...state,...p.state};}
+  }catch(e){}
+}
+function save(){
+  if(!storageOK){showToast('No se pudo guardar ⚠',false);return;}
+  try{localStorage.setItem(STORE,JSON.stringify({weights,rms,state}));showToast('Guardado ✓',true);}
+  catch(e){showToast('Error al guardar ⚠',false);}
+}
+function qSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,500);}
+function showToast(m,ok){
+  const t=document.getElementById('toast');t.textContent=m;
+  t.className='toast '+(ok?'ok':'err')+' show';
+  clearTimeout(showToast._t);showToast._t=setTimeout(()=>t.classList.remove('show'),1300);
+}
+const wKey=(d,i,w)=>`${d}-${i}-w${w}`;
+const rmK=k=>`rm-${k}`;
+function lastEntry(d,i,w){for(let x=w-1;x>=1;x--){const v=weights[wKey(d,i,x)];if(v)return{w:x,v};}return null;}
+function target(ex){
+  if(!ex.rm)return null;
+  const rv=rms[rmK(ex.rm)];if(!rv)return null;
+  const lo=Math.round(rv*ex.pct[0]/100/2.5)*2.5, hi=Math.round(rv*ex.pct[1]/100/2.5)*2.5;
+  return `${lo}–${hi} kg`;
+}
+
+/* ═══════ GUÍA VIEW ═══════ */
+function imgBlock(ex){
+  return `<div class="ex-img-wrap">
+    <img src="${ex.img}" alt="${ex.name}" loading="lazy"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+    <div class="ex-fb"><div class="fe">${ex.emoji}</div><div class="fl">${ex.name}</div></div>
+  </div>`;
+}
+function guiaCard(ex,i,type){
+  return `<div class="ex-card" style="animation-delay:${i*40}ms">
+    ${imgBlock(ex)}
+    <div class="ex-strip ${type}-strip"></div>
+    <div class="ex-body">
+      <div class="ex-top"><div class="ex-name">${ex.name}</div><div class="scheme-pill">${ex.scheme}</div></div>
+      <span class="pct-chip ${PC[ex.pctType]}">${ex.pctTxt}</span>
+      <div class="info-grid">
+        <div class="ib zone"><div class="il">🎯 Zona a sentir</div><div class="it">${ex.zone}</div></div>
+        <div class="ib tech"><div class="il">⚙️ Técnica</div><div class="it">${ex.tech}</div></div>
+        <div class="ib rests"><div class="il">⏱ Descansos</div><div class="rest-row">${ex.rests.map(r=>`<span class="rc">${r}</span>`).join('')}</div></div>
+        <div class="ib vars"><div class="il">🔄 Si está ocupado</div>${ex.vars.map(v=>`<div class="vi">${v}</div>`).join('')}</div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderGuia(){
+  const d=DAYS.find(x=>x.id===state.day);
+  const warn=d.warn?`<div class="si-warn">${d.warn}</div>`:'';
+  document.getElementById('guiaView').innerHTML=`
+    <div class="sess-intro ${d.type}">
+      <div class="si-top"><div class="si-emoji">${d.icon}</div>
+        <div><div class="si-title">${d.label} — ${d.sub}</div><div class="si-sub">${d.focus}</div></div>
+      </div>${warn}
+    </div>
+    ${d.ex.map((e,i)=>guiaCard(e,i,d.type)).join('')}
+    <div class="notes-block">
+      <h3>📋 Notas</h3>
+      <p><b>Calentamiento (5 min):</b> movilidad + 1 serie al 50% y otra al 65% del primer ejercicio.</p>
+      <p><b>Progresión:</b> completa el techo de reps en todas las series → +2.5 kg la siguiente semana.</p>
+      <p><b>Descarga:</b> cada 4-5 semanas, mitad de volumen (2 series en vez de 3-4).</p>
+    </div>`;
+}
+
+/* ═══════ REGISTRO VIEW ═══════ */
+function renderReg(){
+  const d=DAYS.find(x=>x.id===state.day);
+  const rmInputs=RM_KEYS.map(({k,label})=>{
+    const v=rms[rmK(k)]||'';
+    return `<div class="rm-item"><label>${label}</label>
+      <div class="rm-row"><input type="number" inputmode="decimal" placeholder="0" value="${v}" data-rm="${k}"><span class="u">kg</span></div></div>`;
+  }).join('');
+  const cards=d.ex.map((ex,i)=>{
+    const k=wKey(state.day,i,state.week);
+    const val=weights[k]||'';
+    const last=lastEntry(state.day,i,state.week);
+    const lastTxt=last?`Sem ${last.w}: <b>${last.v} kg</b>`:'';
+    const tg=target(ex);
+    const tgHtml=tg?`<div class="target-line"><span class="tl">Objetivo (${ex.pctTxt})</span><span class="tv">${tg}</span></div>`
+                   :`<div class="target-line"><span class="tl">Referencia</span><span class="tv">${ex.pctTxt}</span></div>`;
+    return `<div class="reg-card" style="animation-delay:${i*35}ms">
+      <div class="reg-accent" style="background:${COLORS[d.type]}"></div>
+      <div class="reg-top"><div class="reg-name">${ex.name}</div><div class="reg-scheme">${ex.scheme}</div></div>
+      ${tgHtml}
+      <div class="input-row"><label>Peso usado</label>
+        <div class="wt-wrap ${val?'filled':''}" data-wrap="${i}">
+          <input type="number" inputmode="decimal" step="0.5" placeholder="0" value="${val}" data-i="${i}">
+          <span class="unit">kg</span>
+        </div>
+      </div>
+      <div class="last-entry">${lastTxt}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('regView').innerHTML=`
+    <div class="rm-banner">
+      <h2>Tus 1RM estimados</h2>
+      <p>Se usan para calcular la carga objetivo. Aproxima si no lo sabes exacto.</p>
+      <div class="rm-grid">${rmInputs}</div>
+    </div>
+    <div class="weekbar"><span class="lbl">Semana</span>
+      <div class="stepper"><button id="wkDown">−</button><span class="wknum" id="wkNum">${state.week}</span><button id="wkUp">+</button></div>
+    </div>
+    <div style="height:12px"></div>
+    ${cards}
+    <button class="reset" id="resetBtn">Borrar todos los registros</button>`;
+
+  document.querySelectorAll('#regView input[data-rm]').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      const k=rmK(e.target.dataset.rm);
+      if(e.target.value)rms[k]=parseFloat(e.target.value);else delete rms[k];
+      qSave();
+      // refresh targets without full rerender losing focus: update target lines only
+      document.querySelectorAll('#regView .reg-card').forEach((card,i)=>{
+        const ex=d.ex[i];const tg=target(ex);
+        const tv=card.querySelector('.tv');
+        if(tv)tv.textContent=tg||ex.pctTxt;
+      });
+    });
+  });
+  document.querySelectorAll('#regView input[data-i]').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      const i=e.target.dataset.i;
+      const k=wKey(state.day,i,state.week);
+      const wrap=document.querySelector(`#regView [data-wrap="${i}"]`);
+      if(e.target.value){weights[k]=e.target.value;wrap.classList.add('filled');}
+      else{delete weights[k];wrap.classList.remove('filled');}
+      qSave();
+    });
+  });
+  document.getElementById('wkUp').onclick=()=>{if(state.week<52){state.week++;renderReg();qSave();}};
+  document.getElementById('wkDown').onclick=()=>{if(state.week>1){state.week--;renderReg();qSave();}};
+  document.getElementById('resetBtn').onclick=()=>{
+    if(confirm('¿Seguro? Se borran todos los pesos y 1RMs.')){
+      weights={};rms={};state={mode:'reg',day:'pa',week:1};
+      try{localStorage.removeItem(STORE);}catch(e){}
+      renderAll();
+    }
+  };
+}
+
+/* ═══════ SHARED ═══════ */
+function renderTabs(){
+  document.getElementById('tabBar').innerHTML=DAYS.map(d=>
+    `<button class="tab ${d.type} ${d.id===state.day?'on':''}" data-id="${d.id}"
+      style="${d.id===state.day?`color:${COLORS[d.type]}`:''}">
+      <span class="ti">${d.icon}</span><span>${d.label}</span>
+    </button>`).join('');
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    state.day=t.dataset.id;renderAll();qSave();window.scrollTo({top:0,behavior:'smooth'});
+  });
+}
+function renderHead(){
+  const d=DAYS.find(x=>x.id===state.day);
+  document.getElementById('headDay').textContent=d.label.toUpperCase();
+}
+function renderMode(){
+  const g=state.mode==='guia';
+  document.getElementById('guiaView').classList.toggle('hidden',!g);
+  document.getElementById('regView').classList.toggle('hidden',g);
+  document.getElementById('modeGuia').classList.toggle('on',g);
+  document.getElementById('modeReg').classList.toggle('on',!g);
+}
+function renderAll(){renderTabs();renderHead();renderMode();renderGuia();renderReg();}
+
+document.getElementById('modeGuia').onclick=()=>{state.mode='guia';renderMode();qSave();};
+document.getElementById('modeReg').onclick=()=>{state.mode='reg';renderMode();qSave();};
+
+/* ═══════ INIT + SW ═══════ */
+load();renderAll();
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
