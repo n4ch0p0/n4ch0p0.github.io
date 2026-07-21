@@ -168,16 +168,72 @@ main{padding:0 13px;}
 .notes-block p{font-size:11px;color:var(--muted);line-height:1.5;}
 .notes-block p+p{margin-top:5px;}
 .notes-block b{color:var(--foam);}
+
+/* ══ TIMERS (session + rest) ══ */
+.timer-row{position:relative;height:32px;margin-top:10px;}
+.timer-session{
+  display:flex;align-items:center;gap:8px;height:100%;cursor:pointer;
+  transition:opacity .2s;
+}
+.timer-session.compact{opacity:0;pointer-events:none;position:absolute;inset:0;}
+.ts-dot{width:7px;height:7px;border-radius:50%;background:var(--dcol,var(--acc));flex:0 0 auto;}
+.ts-dot.live{animation:tsBlink 1.4s ease-in-out infinite;}
+@keyframes tsBlink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.ts-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:var(--muted);}
+.ts-val{font-family:'Bebas Neue';font-size:18px;letter-spacing:.03em;color:var(--foam);}
+.ts-hint{font-size:9px;color:var(--muted);margin-left:auto;}
+.timer-rest{
+  position:absolute;inset:0;display:flex;align-items:center;gap:10px;
+  background:rgba(245,166,35,.14);
+  background:color-mix(in srgb, var(--dcol,var(--acc)) 14%, transparent);
+  border:1px solid var(--dcol,var(--acc));border-radius:10px;padding:0 8px 0 12px;
+  animation:restPulse 1.6s ease-in-out infinite;
+}
+.timer-rest.hidden{display:none;}
+.timer-rest.paused{animation:none;opacity:.7;}
+.timer-rest.done{background:rgba(61,214,140,.18);border-color:var(--green);animation:none;}
+@keyframes restPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--dcol,var(--acc)) 35%, transparent);}
+  50%{box-shadow:0 0 0 4px transparent;}}
+.tr-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--dcol,var(--acc));white-space:nowrap;}
+.tr-val{font-family:'Bebas Neue';font-size:23px;letter-spacing:.03em;color:var(--foam);margin-left:auto;}
+.tr-actions{display:flex;gap:6px;}
+.tr-btn{width:27px;height:27px;border-radius:7px;border:1px solid var(--line);background:var(--s1);
+  color:var(--foam);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+.tr-btn:active{background:var(--dcol,var(--acc));color:var(--bg);}
+.tr-cancel{color:#ff8f8f;}
+
+.rest-start-btn{
+  margin-top:8px;width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);
+  background:var(--s1);color:var(--foam);font-family:'Bebas Neue';letter-spacing:.06em;
+  font-size:13px;cursor:pointer;transition:.15s;
+}
+.rest-start-btn:active{background:var(--dcol,var(--acc));color:var(--bg);border-color:var(--dcol,var(--acc));}
 </style>
 </head>
 <body>
 
-<div class="site-head">
+<div class="site-head" id="siteHead">
   <div class="head-row">
     <div class="head-title"><small>Energy Fit · Verano</small><span id="headDay">PUSH A</span></div>
     <div class="mode-switch">
       <button id="modeGuia" class="on">Guía</button>
       <button id="modeReg">Registro</button>
+    </div>
+  </div>
+  <div class="timer-row" id="timerRow">
+    <div class="timer-session" id="timerSession" title="Toca para iniciar/reiniciar">
+      <span class="ts-dot" id="tsDot"></span>
+      <span class="ts-label">Sesión</span>
+      <span class="ts-val" id="sessVal">00:00</span>
+      <span class="ts-hint" id="tsHint">Toca para empezar</span>
+    </div>
+    <div class="timer-rest hidden" id="timerRest">
+      <span class="tr-label" id="restLabel">Descanso</span>
+      <span class="tr-val" id="restVal">00:00</span>
+      <div class="tr-actions">
+        <button class="tr-btn" id="restPauseBtn" type="button">⏸</button>
+        <button class="tr-btn tr-cancel" id="restCancelBtn" type="button">✕</button>
+      </div>
     </div>
   </div>
 </div>
@@ -441,6 +497,158 @@ function target(ex){
   return `${lo}–${hi} kg`;
 }
 
+/* ═══════ TIMERS (sesión + descanso) ═══════ */
+let sessionStartAt=null, sessionInt=null;
+let restState=null; // {day,idx,name,total,endAt,remaining,paused}
+let restInt=null;
+let wakeLock=null;
+let audioCtx=null;
+
+function fmtMMSS(totalSec){
+  totalSec=Math.max(0,Math.round(totalSec));
+  const m=Math.floor(totalSec/60), s=totalSec%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function parseRestSeconds(txt){
+  const m=txt.match(/(\d+(?:[.,]\d+)?)\s*(min|s)\b/i);
+  if(!m)return 60;
+  const n=parseFloat(m[1].replace(',','.'));
+  return Math.round(m[2].toLowerCase()==='min'?n*60:n);
+}
+
+function startSession(){
+  if(sessionStartAt)return;
+  sessionStartAt=Date.now();
+  clearInterval(sessionInt);
+  sessionInt=setInterval(updateSessionUI,1000);
+  updateSessionUI();
+}
+function resetSession(){
+  sessionStartAt=null;
+  clearInterval(sessionInt);
+  updateSessionUI();
+}
+function ensureSession(){ if(!sessionStartAt) startSession(); }
+function updateSessionUI(){
+  const val=document.getElementById('sessVal');
+  const dot=document.getElementById('tsDot');
+  const hint=document.getElementById('tsHint');
+  if(!val)return;
+  const running=!!sessionStartAt;
+  val.textContent=running?fmtMMSS((Date.now()-sessionStartAt)/1000):'00:00';
+  if(dot)dot.classList.toggle('live',running);
+  if(hint)hint.textContent=running?'Toca para reiniciar':'Toca para empezar';
+}
+
+function startRest(dayId,idx,ex){
+  ensureSession();
+  const sec=parseRestSeconds(ex.rests[0]);
+  clearInterval(restInt);
+  restState={day:dayId,idx,name:ex.name,total:sec,endAt:Date.now()+sec*1000,paused:false,remaining:sec};
+  requestWakeLock();
+  showRestUI();
+  restInt=setInterval(tickRest,250);
+  tickRest();
+}
+function tickRest(){
+  if(!restState||restState.paused)return;
+  const remaining=(restState.endAt-Date.now())/1000;
+  if(remaining<=0){ finishRest(); return; }
+  updateRestUI(remaining);
+}
+function finishRest(){
+  clearInterval(restInt);
+  updateRestUI(0);
+  playBeep();
+  if(navigator.vibrate)navigator.vibrate([200,100,200,100,300]);
+  releaseWakeLock();
+  setTimeout(()=>{ restState=null; hideRestUI(); },2500);
+}
+function pauseResumeRest(){
+  if(!restState)return;
+  if(restState.paused){
+    restState.endAt=Date.now()+restState.remaining*1000;
+    restState.paused=false;
+    clearInterval(restInt);
+    restInt=setInterval(tickRest,250);
+    requestWakeLock();
+  }else{
+    restState.remaining=(restState.endAt-Date.now())/1000;
+    restState.paused=true;
+    clearInterval(restInt);
+    releaseWakeLock();
+  }
+  updateRestUI(restState.paused?restState.remaining:(restState.endAt-Date.now())/1000);
+}
+function cancelRest(){
+  clearInterval(restInt);
+  restState=null;
+  releaseWakeLock();
+  hideRestUI();
+}
+function updateRestUI(remaining){
+  const val=document.getElementById('restVal');
+  const label=document.getElementById('restLabel');
+  const bar=document.getElementById('timerRest');
+  const pauseBtn=document.getElementById('restPauseBtn');
+  if(!val||!bar)return;
+  val.textContent=fmtMMSS(remaining);
+  bar.classList.toggle('done',remaining<=0);
+  bar.classList.toggle('paused',!!(restState&&restState.paused));
+  if(pauseBtn)pauseBtn.textContent=restState&&restState.paused?'▶':'⏸';
+  if(label)label.textContent=remaining<=0?'¡Descanso terminado!':(restState&&restState.paused?'Pausado':'Descanso');
+}
+function showRestUI(){
+  document.getElementById('timerRest').classList.remove('hidden');
+  document.getElementById('timerSession').classList.add('compact');
+}
+function hideRestUI(){
+  const el=document.getElementById('timerRest');
+  if(el)el.classList.add('hidden');
+  document.getElementById('timerSession').classList.remove('compact');
+}
+
+async function requestWakeLock(){
+  try{
+    if('wakeLock' in navigator){
+      wakeLock=await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release',()=>{wakeLock=null;});
+    }
+  }catch(e){ wakeLock=null; }
+}
+function releaseWakeLock(){
+  try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){}
+}
+
+function playBeep(){
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    const now=audioCtx.currentTime;
+    for(let i=0;i<3;i++){
+      const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type='sine'; o.frequency.value=880;
+      g.gain.setValueAtTime(0.0001,now+i*0.3);
+      g.gain.exponentialRampToValueAtTime(0.35,now+i*0.3+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,now+i*0.3+0.25);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now+i*0.3); o.stop(now+i*0.3+0.3);
+    }
+  }catch(e){}
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){
+    updateSessionUI();
+    if(restState){
+      if(!restState.paused){
+        const remaining=(restState.endAt-Date.now())/1000;
+        if(remaining<=0)finishRest(); else{ updateRestUI(remaining); requestWakeLock(); }
+      }
+    }
+  }
+});
+
 /* ═══════ GUÍA VIEW ═══════ */
 function imgBlock(ex){
   return `<div class="ex-img-wrap">
@@ -459,7 +667,9 @@ function guiaCard(ex,i,type){
       <div class="info-grid">
         <div class="ib zone"><div class="il">🎯 Zona a sentir</div><div class="it">${ex.zone}</div></div>
         <div class="ib tech"><div class="il">⚙️ Técnica</div><div class="it">${ex.tech}</div></div>
-        <div class="ib rests"><div class="il">⏱ Descansos</div><div class="rest-row">${ex.rests.map(r=>`<span class="rc">${r}</span>`).join('')}</div></div>
+        <div class="ib rests"><div class="il">⏱ Descansos</div><div class="rest-row">${ex.rests.map(r=>`<span class="rc">${r}</span>`).join('')}</div>
+          <button class="rest-start-btn" data-idx="${i}" type="button">▶ Iniciar descanso</button>
+        </div>
         <div class="ib vars"><div class="il">🔄 Si está ocupado</div>${ex.vars.map(v=>`<div class="vi">${v}</div>`).join('')}</div>
       </div>
     </div>
@@ -481,6 +691,12 @@ function renderGuia(){
       <p><b>Progresión:</b> completa el techo de reps en todas las series → +2.5 kg la siguiente semana.</p>
       <p><b>Descarga:</b> cada 4-5 semanas, mitad de volumen (2 series en vez de 3-4).</p>
     </div>`;
+  document.querySelectorAll('#guiaView .rest-start-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      const i=parseInt(btn.dataset.idx,10);
+      startRest(d.id,i,d.ex[i]);
+    };
+  });
 }
 
 /* ═══════ REGISTRO VIEW ═══════ */
@@ -567,12 +783,14 @@ function renderTabs(){
       <span class="ti">${d.icon}</span><span>${d.label}</span>
     </button>`).join('');
   document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    if(t.dataset.id!==state.day){resetSession();cancelRest();}
     state.day=t.dataset.id;renderAll();qSave();window.scrollTo({top:0,behavior:'smooth'});
   });
 }
 function renderHead(){
   const d=DAYS.find(x=>x.id===state.day);
   document.getElementById('headDay').textContent=d.label.toUpperCase();
+  document.getElementById('timerRow').style.setProperty('--dcol',COLORS[d.type]);
 }
 function renderMode(){
   const g=state.mode==='guia';
@@ -585,6 +803,13 @@ function renderAll(){renderTabs();renderHead();renderMode();renderGuia();renderR
 
 document.getElementById('modeGuia').onclick=()=>{state.mode='guia';renderMode();qSave();};
 document.getElementById('modeReg').onclick=()=>{state.mode='reg';renderMode();qSave();};
+
+document.getElementById('timerSession').onclick=()=>{
+  if(!sessionStartAt){startSession();}
+  else if(confirm('¿Reiniciar el cronómetro de sesión?')){resetSession();}
+};
+document.getElementById('restPauseBtn').onclick=pauseResumeRest;
+document.getElementById('restCancelBtn').onclick=cancelRest;
 
 /* ═══════ INIT + SW ═══════ */
 load();renderAll();

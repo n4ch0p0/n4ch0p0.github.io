@@ -1,4 +1,4 @@
-const CACHE = 'ppl-verano-v1';
+const CACHE = 'ppl-verano-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
