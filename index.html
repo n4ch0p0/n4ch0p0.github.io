@@ -58,7 +58,17 @@ const POSITIONS = [
   {id:"descanso",short:"D"},
 ];
 const ROT_BY_ID = Object.fromEntries(ROTATIONS.map(r=>[r.id,r]));
-const posLabel = id => id==="descanso" ? "Descanso" : "Posición "+id;
+const posLabel = id => id==="descanso" ? "Comidas" : "Posición "+id;
+
+/* Tipos de registro extra: no pertenecen a ninguna rotación.
+   Las entradas antiguas no tienen "type" -> se tratan como "rotacion" (compatibilidad). */
+const DAY_TYPES = [
+  { id:"rotacion", label:"Rotación" },
+  { id:"apoyo",     label:"Apoyo",  color:"#f59e0b" },
+  { id:"libre",     label:"Libre",  color:"#64748b" },
+];
+const DT_BY_ID = Object.fromEntries(DAY_TYPES.map(t=>[t.id,t]));
+const entryKind = e => (e && (e.type==="apoyo"||e.type==="libre")) ? e.type : "rotacion";
 
 /* ---------------- Utilidades ---------------- */
 const toKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -83,12 +93,17 @@ const ico = {
 
 /* ---------------- Estado + persistencia ---------------- */
 const STORE = "ovi-rotaciones-v1";
-let state = { tab:"hoy", entries:{}, date:todayKey(), rot:null, pos:null };
+let state = { tab:"hoy", entries:{}, date:todayKey(), rot:null, pos:null, mode:"rotacion" };
 
 function load(){ try{ state.entries = JSON.parse(localStorage.getItem(STORE)) || {}; }catch{ state.entries = {}; } }
 function persist(){ try{ localStorage.setItem(STORE, JSON.stringify(state.entries)); }catch{} }
 
-function syncDraft(){ const e=state.entries[state.date]; state.rot=e?e.rotation:null; state.pos=e?e.position:null; }
+function syncDraft(){
+  const e=state.entries[state.date];
+  state.mode = e ? entryKind(e) : "rotacion";
+  state.rot = (e && state.mode==="rotacion") ? e.rotation : null;
+  state.pos = (e && state.mode==="rotacion") ? e.position : null;
+}
 
 function toast(msg){
   const t=document.createElement("div"); t.className="display";
@@ -105,12 +120,18 @@ function computeStats(){
   const rotC=Object.fromEntries(ROTATIONS.map(r=>[r.id,0]));
   const posC=Object.fromEntries(POSITIONS.map(p=>[p.id,0]));
   const heat={}; ROTATIONS.forEach(r=>POSITIONS.forEach(p=>heat[r.id+"|"+p.id]=0));
-  Object.values(state.entries).forEach(({rotation,position})=>{
+  let apoyo=0, libre=0, rotTotal=0;
+  Object.values(state.entries).forEach(e=>{
+    const kind=entryKind(e);
+    if(kind==="apoyo"){ apoyo++; return; }
+    if(kind==="libre"){ libre++; return; }
+    rotTotal++;
+    const {rotation,position}=e;
     if(rotC[rotation]!=null) rotC[rotation]++;
     if(posC[position]!=null) posC[position]++;
     if(heat[rotation+"|"+position]!=null) heat[rotation+"|"+position]++;
   });
-  return {rotC,posC,heat,maxHeat:Math.max(1,...Object.values(heat))};
+  return {rotC,posC,heat,maxHeat:Math.max(1,...Object.values(heat)),apoyo,libre,rotTotal};
 }
 
 /* Donut SVG */
@@ -156,13 +177,30 @@ function tabs(){
 function viewHoy(){
   const isToday = state.date===todayKey();
   const existing = state.entries[state.date];
+  const mode = state.mode || "rotacion";
+  const modeBtns = DAY_TYPES.map(t=>{ const on=mode===t.id; const color=t.color||'var(--sun)';
+    return `<button class="tap" data-mode="${t.id}" style="cursor:pointer;border-radius:12px;padding:11px 6px;font-size:13px;font-weight:600;background:${on?hexA(color,.18):'var(--surface2)'};color:${on?'#fff':'var(--dim)'};border:1.5px solid ${on?color:'transparent'}">${t.label}</button>`;
+  }).join("");
   const rotBtns = ROTATIONS.map(r=>{ const on=state.rot===r.id;
     return `<button class="tap" data-rot="${r.id}" style="cursor:pointer;border-radius:12px;padding:11px 6px;font-size:13px;font-weight:600;background:${on?hexA(r.color,.18):'var(--surface2)'};color:${on?'#fff':'var(--dim)'};border:1.5px solid ${on?r.color:'transparent'}"><span style="display:inline-block;width:9px;height:9px;border-radius:99px;background:${r.color};margin-right:6px;vertical-align:middle"></span>${r.label}</button>`;
   }).join("");
   const posBtns = POSITIONS.map(p=>{ const on=state.pos===p.id; const wide=p.id==="descanso";
-    return `<button class="tap" data-pos="${p.id}" style="cursor:pointer;border-radius:11px;height:46px;flex:${wide?'1 1 100%':'1 1 0'};min-width:${wide?'auto':'40px'};font-size:15px;font-weight:600;background:${on?'var(--teal)':'var(--surface2)'};color:${on?'#04201c':'var(--dim)'};border:1.5px solid ${on?'var(--teal)':'transparent'}">${wide?'Descanso':p.short}</button>`;
+    return `<button class="tap" data-pos="${p.id}" style="cursor:pointer;border-radius:11px;height:46px;flex:${wide?'1 1 100%':'1 1 0'};min-width:${wide?'auto':'40px'};font-size:15px;font-weight:600;background:${on?'var(--teal)':'var(--surface2)'};color:${on?'#04201c':'var(--dim)'};border:1.5px solid ${on?'var(--teal)':'transparent'}">${wide?'Comidas':p.short}</button>`;
   }).join("");
-  const ready = state.rot && state.pos;
+  const ready = mode==="rotacion" ? !!(state.rot && state.pos) : true;
+  const registroSection = mode==="rotacion" ? `
+    <div class="card" style="margin-top:12px">
+      <div class="label">Rotación</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px">${rotBtns}</div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="label">Posición</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${posBtns}</div>
+    </div>` : `
+    <div class="card" style="margin-top:12px;text-align:center;padding:22px 16px">
+      <div style="color:var(--dim);font-size:13px;line-height:1.5">Este día se guardará como <b style="color:var(--text)">${DT_BY_ID[mode].label}</b>, sin rotación ni posición asignada.</div>
+    </div>`;
   return `<section class="fade" style="margin-top:16px">
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -180,14 +218,10 @@ function viewHoy(){
     </div>
 
     <div class="card" style="margin-top:12px">
-      <div class="label">Rotación</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px">${rotBtns}</div>
+      <div class="label">Tipo de registro</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px">${modeBtns}</div>
     </div>
-
-    <div class="card" style="margin-top:12px">
-      <div class="label">Posición</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${posBtns}</div>
-    </div>
+    ${registroSection}
 
     <button class="tap" id="saveBtn" ${ready?'':'disabled'} style="width:100%;margin-top:16px;border:none;border-radius:14px;padding:15px;font-size:16px;font-weight:700;cursor:${ready?'pointer':'not-allowed'};background:${ready?'var(--sun)':'var(--surface2)'};color:${ready?'#1a0f08':'var(--faint)'}">${existing?'Actualizar día':'Guardar día'}</button>
     ${existing?`<button id="delMain" style="width:100%;margin-top:8px;background:transparent;border:none;color:var(--dim);font-size:13px;cursor:pointer;padding:8px;display:flex;align-items:center;justify-content:center;gap:6px">${ico.trash} Borrar registro de este día</button>`:''}
@@ -200,7 +234,20 @@ function viewStats(){
   const s=computeStats();
   const rotData=ROTATIONS.map(r=>({...r,value:s.rotC[r.id]}));
 
-  const rotLegend = rotData.map(r=>{ const pct=total?r.value/total*100:0;
+  const typeData=[
+    {label:"Rotación",value:s.rotTotal,color:"#2dd4bf"},
+    {label:"Apoyo",value:s.apoyo,color:DT_BY_ID.apoyo.color},
+    {label:"Libre",value:s.libre,color:DT_BY_ID.libre.color},
+  ];
+  const typeLegend = typeData.map(t=>{ const pct=total?t.value/total*100:0;
+    return `<div style="display:flex;align-items:center;gap:10px">
+      <span style="width:10px;height:10px;border-radius:99px;background:${t.color};flex-shrink:0"></span>
+      <span style="font-size:13px;flex:1">${t.label}</span>
+      <span class="tnum" style="font-size:12px;color:var(--dim)">${t.value}d</span>
+      <span class="tnum" style="width:44px;text-align:right;font-size:13px;font-weight:600;color:${t.color}">${pct.toFixed(0)}%</span>
+    </div>`;}).join("");
+
+  const rotLegend = rotData.map(r=>{ const pct=s.rotTotal?r.value/s.rotTotal*100:0;
     return `<div style="display:flex;align-items:center;gap:10px">
       <span style="width:10px;height:10px;border-radius:99px;background:${r.color};flex-shrink:0"></span>
       <span style="font-size:13px;flex:1">${r.label}</span>
@@ -208,9 +255,9 @@ function viewStats(){
       <span class="tnum" style="width:44px;text-align:right;font-size:13px;font-weight:600;color:${r.color}">${pct.toFixed(0)}%</span>
     </div>`;}).join("");
 
-  const posBars = POSITIONS.map(p=>{ const v=s.posC[p.id]; const pct=total?v/total*100:0;
+  const posBars = POSITIONS.map(p=>{ const v=s.posC[p.id]; const pct=s.rotTotal?v/s.rotTotal*100:0;
     return `<div style="display:flex;align-items:center;gap:10px">
-      <span style="width:74px;font-size:13px;flex-shrink:0">${p.id==='descanso'?'Descanso':'Pos. '+p.id}</span>
+      <span style="width:74px;font-size:13px;flex-shrink:0">${p.id==='descanso'?'Comidas':'Pos. '+p.id}</span>
       <div style="flex:1;height:10px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden">
         <div style="width:${pct}%;height:100%;border-radius:99px;background:${p.id==='descanso'?'var(--dim)':'var(--teal)'}"></div></div>
       <span class="tnum" style="width:56px;text-align:right;font-size:13px;color:var(--dim)"><b style="color:var(--text)">${pct.toFixed(0)}%</b> · ${v}</span>
@@ -228,8 +275,14 @@ function viewStats(){
       <div style="color:var(--dim);font-size:13px;margin-top:4px">${total===1?'día registrado':'días registrados'} · verano 2026</div>
     </div>
     <div class="card">
+      <div class="label">Por tipo de día</div>
+      ${donut(typeData,total)}
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:6px">${typeLegend}</div>
+    </div>
+    ${s.rotTotal>0?`
+    <div class="card">
       <div class="label">Por rotación</div>
-      ${donut(rotData,total)}
+      ${donut(rotData,s.rotTotal)}
       <div style="display:flex;flex-direction:column;gap:9px;margin-top:6px">${rotLegend}</div>
     </div>
     <div class="card">
@@ -240,7 +293,7 @@ function viewStats(){
       <div class="label">Tablón de rotaciones</div>
       <div style="font-size:12px;color:var(--dim);margin:4px 0 12px">Veces que has empezado en cada combinación. Más intenso = más repetido.</div>
       <div style="overflow-x:auto"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div>
-    </div>
+    </div>`:''}
   </section>`;
 }
 
@@ -248,12 +301,22 @@ function viewHist(){
   const keys=Object.keys(state.entries).sort().reverse();
   if(keys.length===0) return empty("Historial vacío","Aquí aparecerán todos los días que registres, del más reciente al más antiguo.");
   return `<section class="fade" style="margin-top:16px;display:flex;flex-direction:column;gap:8px">`+
-    keys.map(k=>{ const e=state.entries[k]; const r=ROT_BY_ID[e.rotation];
+    keys.map(k=>{ const e=state.entries[k]; const kind=entryKind(e);
+      let barColor, line;
+      if(kind!=="rotacion"){
+        const t=DT_BY_ID[kind];
+        barColor=t.color;
+        line=`<span style="color:${t.color}">${t.label}</span>`;
+      } else {
+        const r=ROT_BY_ID[e.rotation];
+        barColor=r?r.color:'var(--dim)';
+        line=`<span style="color:${r?r.color:''}">${r?r.label:e.rotation}</span> · ${posLabel(e.position)}`;
+      }
       return `<div class="card" style="padding:13px;display:flex;align-items:center;gap:12px">
-        <div style="width:6px;align-self:stretch;border-radius:99px;background:${r?r.color:'var(--dim)'}"></div>
+        <div style="width:6px;align-self:stretch;border-radius:99px;background:${barColor}"></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:14px;font-weight:600;text-transform:capitalize">${fmtShort(k)}</div>
-          <div style="font-size:12px;color:var(--dim);margin-top:2px"><span style="color:${r?r.color:''}">${r?r.label:e.rotation}</span> · ${posLabel(e.position)}</div>
+          <div style="font-size:12px;color:var(--dim);margin-top:2px">${line}</div>
         </div>
         <button class="tap" data-edit="${k}" style="background:var(--surface2);border:none;border-radius:9px;width:36px;height:36px;cursor:pointer;display:grid;place-items:center;color:var(--dim);flex-shrink:0">${ico.pencil}</button>
         <button class="tap" data-del="${k}" style="background:var(--surface2);border:none;border-radius:9px;width:36px;height:36px;cursor:pointer;display:grid;place-items:center;color:var(--dim);flex-shrink:0">${ico.trash}</button>
@@ -277,12 +340,15 @@ function bind(){
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ state.tab=b.dataset.tab; render(); });
   document.querySelectorAll("[data-shift]").forEach(b=>b.onclick=()=>{ state.date=shiftKey(state.date,+b.dataset.shift); syncDraft(); render(); });
   const di=document.getElementById("dateInput"); if(di) di.onchange=e=>{ if(e.target.value){ state.date=e.target.value; syncDraft(); render(); } };
+  document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ state.mode=b.dataset.mode; if(state.mode!=="rotacion"){ state.rot=null; state.pos=null; } render(); });
   document.querySelectorAll("[data-rot]").forEach(b=>b.onclick=()=>{ state.rot=b.dataset.rot; render(); });
   document.querySelectorAll("[data-pos]").forEach(b=>b.onclick=()=>{ state.pos=b.dataset.pos; render(); });
   const sb=document.getElementById("saveBtn"); if(sb) sb.onclick=()=>{
-    if(!state.rot||!state.pos) return;
+    const mode=state.mode||"rotacion";
+    if(mode==="rotacion" && (!state.rot||!state.pos)) return;
     const had=!!state.entries[state.date];
-    state.entries[state.date]={rotation:state.rot,position:state.pos}; persist();
+    state.entries[state.date] = mode==="rotacion" ? {rotation:state.rot,position:state.pos} : {type:mode};
+    persist();
     toast(had?"Día actualizado":"Día guardado"); render();
   };
   const dm=document.getElementById("delMain"); if(dm) dm.onclick=()=>{ delete state.entries[state.date]; persist(); syncDraft(); toast("Día borrado"); render(); };
